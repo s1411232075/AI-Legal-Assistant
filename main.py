@@ -24,30 +24,29 @@ FIELD_MAP = {
     "pay_day": "每月交租日", "special_terms": "特別約定事項"
 }
 
-# --- 2. 邏輯處理區 ---
+# --- 2. 邏輯處理區：Word 生成 ---
 
 def generate_docx(template_name, data, output_name):
     try:
         doc = Document(template_name)
-        for paragraph in doc.paragraphs:
-            for key, value in data.items():
-                tag = f"{{{{{key}}}}}"
-                if tag in paragraph.text:
-                    paragraph.text = paragraph.text.replace(tag, str(value))
-        
+        # 遍歷所有段落與表格
+        all_paragraphs = list(doc.paragraphs)
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
-                    for paragraph in cell.paragraphs:
-                        for key, value in data.items():
-                            tag = f"{{{{{key}}}}}"
-                            if tag in paragraph.text:
-                                paragraph.text = paragraph.text.replace(tag, str(value))
-                                
+                    all_paragraphs.extend(cell.paragraphs)
+        
+        # 進行標籤替換
+        for para in all_paragraphs:
+            for key, value in data.items():
+                tag = f"{{{{{key}}}}}"
+                if tag in para.text:
+                    para.text = para.text.replace(tag, str(value))
+        
         doc.save(output_name)
-        print(f"\n 文件已成功生成：{output_name}")
+        print(f"\n✅ 文件已成功生成：{output_name}")
     except Exception as e:
-        print(f" 生成失敗: {e}")
+        print(f"❌ 生成失敗: {e}")
 
 # --- 3. Agent 對話核心 ---
 
@@ -55,78 +54,93 @@ def start_legal_agent():
     user_context = {}
     current_mode = None 
     
-    print("⚖️ AI 法律助理已上線。您可以直接描述您的問題。")
+    print("⚖️ AI 法律助理已上線。您可以直接描述您的問題（例如：有人欠我錢）。")
     
     while True:
-        user_input = input("\n👤 您：")
-        
-        # 找出目前還缺什麼，直接餵給 Prompt 讓 AI 知道它的目標
-        missing_list = []
-        if current_mode in CONFIG:
-            missing_list = [f for f in CONFIG[current_mode]['fields'] if f not in user_context]
+        # A. 找出下一個缺失的欄位
+        next_field = None
+        if current_mode:
+            required = CONFIG[current_mode]['fields']
+            missing = [f for f in required if f not in user_context or not str(user_context[f]).strip()]
+            if missing:
+                next_field = missing[0]
 
-        # --- 核心優化：Prompt Engineering ---
-        prompt = f"""
-        ### 任務 ###
-        你是法律數據提取器。從輸入中抓取資訊填入 JSON。
+        # B. 取得使用者輸入
+        user_input = input("\n👤 您：").strip()
+        if not user_input: continue
+
+        # C. 初始模式偵測 (關鍵字判定)
+        if not current_mode:
+            if any(k in user_input for k in ["欠", "錢", "還", "借"]):
+                current_mode = "存證信函"
+            elif any(k in user_input for k in ["租", "房", "合約"]):
+                current_mode = "房屋租賃"
+
+        # D. 建立具備「上下文感知」的 Prompt
+        # 告訴 AI 我們現在在問什麼，它才不會把答案漏掉
+        field_instruction = f"目前正在詢問：{FIELD_MAP.get(next_field, '初步描述')}"
         
-        ### 強制範例 (ONE-SHOT) ###
-        使用者輸入: "我叫張三住台北，欠款人李四住桃園，欠五萬，去年1月借的，限3天還。"
-        輸出: {{
-            "mode": "存證信函",
-            "new_data": {{
-                "sender_name": "張三",
-                "sender_addr": "台北",
-                "receiver_name": "李四",
-                "receiver_addr": "桃園",
-                "amount": "五萬",
-                "fact_date": "去年1月",
-                "deadline": "3"
+        prompt = f"""
+        你是一個法律數據提取器。
+        【目前模式】：{current_mode if current_mode else "未知"}
+        【當前任務】：從使用者輸入中提取「{field_instruction}」。
+        
+        ### 規則 ###
+        1. 僅回傳 JSON 格式。
+        2. 如果使用者提供的是對「{field_instruction}」的回答，請將其放入對應欄位。
+        3. 不要編造任何資訊，沒提到就填 null。
+
+        ### 輸出格式 ###
+        {{
+            "mode": "{current_mode if current_mode else "null"}",
+            "extracted_data": {{
+                "{next_field if next_field else 'info'}": "提取到的內容"
             }}
         }}
-        
-        ### 當前目標 ###
-        - 待收集欄位: {missing_list}
-        - 使用者輸入: "{user_input}"
-        
-        請嚴格以上述範例格式輸出 JSON，不要解釋。
+
+        使用者輸入："{user_input}"
         """
         
         try:
+            # 呼叫 Ollama (請確保背景有開 ollama)
             response = ollama.chat(model='mistral', messages=[{'role': 'user', 'content': prompt}])
-            raw = response['message']['content']
-            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            raw_content = response['message']['content']
             
+            # 使用 Regex 提取 JSON
+            match = re.search(r'\{.*\}', raw_content, re.DOTALL)
             if match:
                 res = json.loads(match.group())
-                if res.get('mode') and not current_mode:
+                
+                # 更新模式
+                if not current_mode and res.get('mode') and res['mode'] != "null":
                     current_mode = res['mode']
-                if res.get('new_data'):
-                    # 小細節：在更新前，可以印出來看 AI 抓了什麼
-                    # print(f"--- AI 提取到: {res['new_data']} ---")
-                    user_context.update(res['new_data'])
+                
+                # 更新數據 (排除無效值)
+                new_data = res.get('extracted_data', {})
+                for k, v in new_data.items():
+                    if v and str(v).strip() not in ["null", "None", "未提供", "未知", ""]:
+                        user_context[k] = v
             
-            # --- 流程控制 ---
+            # E. 流程狀態檢查與下一步引導
             if not current_mode:
-                if "錢" in user_input or "欠" in user_input: current_mode = "存證信函"
-                elif "租" in user_input: current_mode = "房屋租賃"
-                else:
-                    print("🤖 AI：了解，請問您是要處理存證信函還是房屋租賃？")
-                    continue
+                print("🤖 AI：我不確定您要處理哪種法律文件。請問是「存證信函」還是「房屋租賃」？")
+                continue
 
+            # 再次檢查缺失
             required = CONFIG[current_mode]['fields']
             missing = [f for f in required if f not in user_context]
             
             if not missing:
-                print(f"🤖 AI：資料已齊全！正在產出「{current_mode}」...")
+                print(f"🤖 AI：資料已齊全！正在為您產出「{current_mode}」...")
                 generate_docx(CONFIG[current_mode]['template'], user_context, f"Final_{current_mode}.docx")
                 break
             else:
                 next_f = missing[0]
-                print(f"🤖 AI：已記錄。那請問「{FIELD_MAP.get(next_f, next_f)}」是多少呢？")
+                # 使用 FIELD_MAP 轉換成白話中文問使用者
+                print(f"🤖 AI：已記錄。那請問「{FIELD_MAP.get(next_f, next_f)}」是？")
                 
         except Exception as e:
-            print(f"⚠️ 處理中，請繼續提供資訊...")
+            print(f"⚠️ 處理中發生錯誤，請再試一次...")
 
 if __name__ == "__main__":
     start_legal_agent()
