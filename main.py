@@ -68,32 +68,6 @@ def start_legal_agent():
         # B. 取得使用者輸入
         user_input = input("\n👤 您：").strip()
         if not user_input: continue
-
-        # C. 初始模式偵測 (關鍵字判定)
-        if not current_mode:
-            if any(k in user_input for k in ["欠", "錢", "還", "借"]):
-                current_mode = "存證信函"
-            elif any(k in user_input for k in ["租", "房", "合約"]):
-                current_mode = "房屋租賃"
-
-        # D. 建立具備「上下文感知」的 Prompt
-        # 告訴 AI 我們現在在問什麼，它才不會把答案漏掉
-        field_instruction = f"目前正在詢問：{FIELD_MAP.get(next_field, '初步描述')}"
-        
-        prompt = f"""
-        你是一個法律數據提取器。
-        【目前模式】：{current_mode if current_mode else "未知"}
-        【當前任務】：從使用者輸入中提取「{field_instruction}」。
-        
-        ### 規則 ###
-        1. 僅回傳 JSON 格式。
-        2. 如果使用者提供的是對「{field_instruction}」的回答，請將其放入對應欄位。
-        3. 不要編造任何資訊，沒提到就填 null。
-
-        ### 輸出格式 ###
-        {{
-            "mode": "{current_mode if current_mode else "null"}",
-            "extracted_data": {{
                 "{next_field if next_field else 'info'}": "提取到的內容"
             }}
         }}
