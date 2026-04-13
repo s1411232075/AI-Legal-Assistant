@@ -2,7 +2,7 @@ import ollama
 import json
 import re
 from docx import Document
-
+#這是測試
 # --- 1. 系統設定區 ---
 CONFIG = {
     "存證信函": {
