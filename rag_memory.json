@@ -1,0 +1,81 @@
+{
+  "created_at": "2026-06-07T22:35:21",
+  "updated_at": "2026-06-07T22:35:21",
+  "case_json": {
+    "created_at": "2026-06-07T22:35:21",
+    "model": "qwen2.5:1.5b",
+    "source_sample": "D:\\Project\\存證信函範例.docx",
+    "body_capacity": 200,
+    "data": {
+      "sender_name": "陳玄畫",
+      "sender_address": "台中市北區",
+      "recipient_name": "李冠傑",
+      "recipient_address": "台北市信義區",
+      "event_date": "115/06/07",
+      "case_summary": "對方借50000元不還",
+      "request": "還錢就好",
+      "deadline": "七日內",
+      "legal_basis": "",
+      "consequence": "將依法提起訴訟",
+      "body": "敬啟者：台端於115/06/07對方借50000元不還。請台端於七日內還錢就好。若屆期仍未處理，本人將依法提起訴訟，請勿自誤。"
+    }
+  },
+  "documents": [
+    {
+      "id": "sender_name",
+      "title": "寄件人姓名",
+      "text": "陳玄畫"
+    },
+    {
+      "id": "sender_address",
+      "title": "寄件人地址",
+      "text": "台中市北區"
+    },
+    {
+      "id": "recipient_name",
+      "title": "收件人姓名",
+      "text": "李冠傑"
+    },
+    {
+      "id": "recipient_address",
+      "title": "收件人地址",
+      "text": "台北市信義區"
+    },
+    {
+      "id": "event_date",
+      "title": "事件日期",
+      "text": "115/06/07"
+    },
+    {
+      "id": "case_summary",
+      "title": "事件簡述",
+      "text": "對方借50000元不還"
+    },
+    {
+      "id": "request",
+      "title": "請求事項",
+      "text": "還錢就好"
+    },
+    {
+      "id": "deadline",
+      "title": "履行期限",
+      "text": "七日內"
+    },
+    {
+      "id": "consequence",
+      "title": "後續措施",
+      "text": "將依法提起訴訟"
+    },
+    {
+      "id": "body",
+      "title": "存證信函正文",
+      "text": "敬啟者：台端於115/06/07對方借50000元不還。請台端於七日內還錢就好。若屆期仍未處理，本人將依法提起訴訟，請勿自誤。"
+    },
+    {
+      "id": "scope",
+      "title": "回答範圍",
+      "text": "本助理只回答此存證信函案件、文件格式、內容修改、寄送與相關法律文件問題。"
+    }
+  ],
+  "messages": []
+}

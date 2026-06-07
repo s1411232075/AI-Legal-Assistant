@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-06-07T22:35:21",
+  "model": "qwen2.5:1.5b",
+  "source_sample": "D:\\Project\\存證信函範例.docx",
+  "body_capacity": 200,
+  "data": {
+    "sender_name": "陳玄畫",
+    "sender_address": "台中市北區",
+    "recipient_name": "李冠傑",
+    "recipient_address": "台北市信義區",
+    "event_date": "115/06/07",
+    "case_summary": "對方借50000元不還",
+    "request": "還錢就好",
+    "deadline": "七日內",
+    "legal_basis": "",
+    "consequence": "將依法提起訴訟",
+    "body": "敬啟者：台端於115/06/07對方借50000元不還。請台端於七日內還錢就好。若屆期仍未處理，本人將依法提起訴訟，請勿自誤。"
+  }
+}
